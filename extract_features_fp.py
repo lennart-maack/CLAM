@@ -8,23 +8,87 @@ import pdb
 import time
 from datasets.dataset_h5 import Dataset_All_Bags, Whole_Slide_Bag_FP
 from torch.utils.data import DataLoader
-from models.resnet_custom import resnet50_baseline
+from models.resnet_custom import resnet50_baseline, resnet_50_histo_pretr
+import models.models_vit as models_vit
 import argparse
 from utils.utils import print_network, collate_features
 from utils.file_utils import save_hdf5
 from PIL import Image
 import h5py
 import openslide
+import timm
+from timm.models.layers import trunc_normal_
+from timm.models._hub import load_state_dict_from_hf
+from utils.pos_embed import interpolate_pos_embed
+
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-def compute_w_loader(file_path, output_path, wsi, model,
+
+def load_ViT_model_from_pretr(model_name, path_to_model_checkpoint=None):
+	"""
+	Load ViT model from pretrained checkpoint
+	model (str): model name/size [vit_large_patch16, vit_large_patch32]
+	
+	"""
+
+	print()
+	print(f"Loading model {model_name} from checkpoint {path_to_model_checkpoint} (If checkpoint is None, load pretrained weights from hf hub)")
+	print()
+
+
+	model = models_vit.__dict__[model_name](
+        num_classes=1000,
+        drop_path_rate=0.1,
+        global_pool=True,
+    )
+
+	if path_to_model_checkpoint is None:
+		if model_name == 'vit_large_patch16':
+			pretrained_loc_224 = "timm/vit_large_patch16_224.augreg_in21k_ft_in1k"
+			checkpoint_model = load_state_dict_from_hf(pretrained_loc_224)
+
+		elif model_name == 'vit_large_patch32':
+			pretrained_loc_384 = "timm/vit_large_patch32_384.orig_in21k_ft_in1k"
+			checkpoint_model = load_state_dict_from_hf(pretrained_loc_384)
+
+		else:
+			raise NotImplementedError
+	
+	else:
+		checkpoint = torch.load(path_to_model_checkpoint)
+		checkpoint_model = checkpoint['model']
+
+
+	state_dict = model.state_dict()
+
+	for k in ['head.weight', 'head.bias']:
+		if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
+			print(f"Removing key {k} from pretrained checkpoint")
+			del checkpoint_model[k]
+
+	# interpolate position embedding
+	interpolate_pos_embed(model, checkpoint_model)
+
+	# load pre-trained model
+	msg = model.load_state_dict(checkpoint_model, strict=False)
+	print(msg)
+
+	# manually initialize fc layer
+	trunc_normal_(model.head.weight, std=2e-5)
+
+	return model
+
+
+
+def compute_w_loader(file_path, output_path, wsi, model, model_type,
  	batch_size = 8, verbose = 0, print_every=20, pretrained=True, 
 	custom_downsample=1, target_patch_size=-1):
 	"""
 	args:
 		file_path: directory of bag (.h5 file)
 		output_path: directory to save computed features (.h5 file)
-		model: pytorch model
+		model: model
+		model_type: important on how to extract features
 		batch_size: batch_size for computing features in batches
 		verbose: level of feedback
 		pretrained: use weights pretrained on imagenet
@@ -46,9 +110,18 @@ def compute_w_loader(file_path, output_path, wsi, model,
 			if count % print_every == 0:
 				print('batch {}/{}, {} files processed'.format(count, len(loader), count * batch_size))
 			batch = batch.to(device, non_blocking=True)
-			
-			features = model(batch)
-			features = features.cpu().numpy()
+
+			if model_type in ["resnet50", "resnet_50_histo_pretr"]:
+				features = model(batch)
+				features = features.cpu().numpy()
+
+			elif model_type in ["vit_large_patch16_224_norm_pretr", "vit_large_patch16_384_norm_pretr", 
+		       "vit_large_patch16_224_MAE_pretr", "vit_large_patch16_224_MAE_histopatho_pretr"]  :
+				features = model.forward_features(batch)
+				features = features.cpu().numpy()
+
+			else:
+				raise NotImplementedError
 
 			asset_dict = {'features': features, 'coords': coords}
 			save_hdf5(output_path, asset_dict, attr_dict= None, mode=mode)
@@ -67,6 +140,10 @@ parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
+parser.add_argument('--model', type=str, help="model to load for feature extraction", 
+		    choices=['resnet50', 'resnet_50_histo_pretr', 'vit_large_patch16_224_norm_pretr', 'vit_large_patch16_384_norm_pretr',
+	        'vit_large_patch16_224_MAE_pretr', 'vit_large_patch16_224_MAE_histopatho_pretr'])
+parser.add_argument('--path_to_model_checkpoint', default=None, type=str, help="path to model checkpoint")
 args = parser.parse_args()
 
 
@@ -84,8 +161,43 @@ if __name__ == '__main__':
 	os.makedirs(os.path.join(args.feat_dir, 'h5_files'), exist_ok=True)
 	dest_files = os.listdir(os.path.join(args.feat_dir, 'pt_files'))
 
-	print('loading model checkpoint')
-	model = resnet50_baseline(pretrained=True)
+
+	if args.model == 'resnet50':
+		print('loading model checkpoint for resnet50')
+		model = resnet50_baseline(pretrained=True)
+
+	elif args.model == 'resnet_50_histo_pretr':
+		print('loading model checkpoint for resnet_50_histo_pretr')
+		model = resnet_50_histo_pretr()
+
+	elif args.model == 'vit_large_patch16_224_norm_pretr':
+		print("loading model checkpoint for ViT 224_norm_pretr")
+		model = load_ViT_model_from_pretr(model_name='vit_large_patch16', path_to_model_checkpoint=None)
+		print("model loaded")
+
+	elif args.model == 'vit_large_patch16_384_norm_pretr':
+		print("loading model checkpoint for ViT 384_norm_pretr")
+		model = load_ViT_model_from_pretr(model_name='vit_large_patch32', path_to_model_checkpoint=None)
+		print("model loaded")
+	
+	elif args.model == 'vit_large_patch16_224_MAE_pretr':
+		print("loading model checkpoint for ViT 224_MAE_pretr")
+		model = load_ViT_model_from_pretr(model_name='vit_large_patch16', 
+				    path_to_model_checkpoint="/home/Maack/Medulloblastoma/CLAM/mae_pretrain_vit_large_ImageNet.pth")
+		print("model loaded")
+	
+	elif args.model == 'vit_large_patch16_224_MAE_histopatho_pretr':
+		if args.path_to_model_checkpoint is not None:
+			print("loading model checkpoint for ViT 224_MAE_histopatho_pretr")
+			model = load_ViT_model_from_pretr(model_name='vit_large_patch16',
+				path_to_model_checkpoint=args.path_to_model_checkpoint)
+			print("model loaded")
+		else:
+			raise NotImplementedError
+
+	else:
+		raise NotImplementedError
+
 	model = model.to(device)
 	
 	# print_network(model)
@@ -111,7 +223,7 @@ if __name__ == '__main__':
 		time_start = time.time()
 		wsi = openslide.open_slide(slide_file_path)
 		output_file_path = compute_w_loader(h5_file_path, output_path, wsi, 
-		model = model, batch_size = args.batch_size, verbose = 1, print_every = 20, 
+		model = model, model_type=args.model, batch_size = args.batch_size, verbose = 1, print_every = 20, 
 		custom_downsample=args.custom_downsample, target_patch_size=args.target_patch_size)
 		time_elapsed = time.time() - time_start
 		print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
