@@ -12,11 +12,11 @@ parser.add_argument('--seed', type=int, default=1,
                     help='random seed (default: 1)')
 parser.add_argument('--k', type=int, default=10,
                     help='number of splits (default: 10)')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping'])
-parser.add_argument('--val_frac', type=float, default= 0.1,
-                    help='fraction of labels for validation (default: 0.1)')
-parser.add_argument('--test_frac', type=float, default= 0.1,
-                    help='fraction of labels for test (default: 0.1)')
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping', 'CMB_vs_DN_train_val'])
+parser.add_argument('--val_frac', type=float, default= 0.2,
+                    help='fraction of labels for validation (default: 0.2)')
+parser.add_argument('--test_frac', type=float, default= 0.0,
+                    help='fraction of labels for test (default: 0.0)')
 
 args = parser.parse_args()
 
@@ -39,6 +39,16 @@ elif args.task == 'task_2_tumor_subtyping':
                             label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
                             patient_strat= True,
                             patient_voting='maj',
+                            ignore=[])
+    
+elif args.task == 'CMB_vs_DN_train_val':
+    args.n_classes=2
+    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/CMB_vs_DN_train_val.csv',
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'CMB':0, 'DN':1},
+                            patient_strat= True,
                             ignore=[])
 
 else:

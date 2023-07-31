@@ -239,8 +239,8 @@ class Generic_WSI_Classification_Dataset(Dataset):
 				test_split = Generic_Split(test_data, data_dir=self.data_dir, num_classes=self.num_classes)
 			
 			else:
-				test_split = None
-			
+				test_data = pd.DataFrame(columns=self.slide_data.columns)
+				test_split = Generic_Split(test_data, data_dir=self.data_dir, num_classes=self.num_classes)			
 		
 		else:
 			assert csv_path 
