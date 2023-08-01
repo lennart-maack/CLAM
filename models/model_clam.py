@@ -244,7 +244,7 @@ class CLAM_SB_ViT_small_384(CLAM_SB):
 
         initialize_weights(self)
 
-class CLAM_SB_resnet18_truncated_no_FC(CLAM_SB):
+class CLAM_SB_resnet18_no_FC(CLAM_SB):
     def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
         super(CLAM_SB, self).__init__()
@@ -273,7 +273,7 @@ class CLAM_SB_resnet18_truncated_no_FC(CLAM_SB):
 
         initialize_weights(self)
 
-class CLAM_SB_resnet18_truncated(CLAM_SB):
+class CLAM_SB_resnet18(CLAM_SB):
     def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
         super(CLAM_SB, self).__init__()
@@ -300,7 +300,7 @@ class CLAM_SB_resnet18_truncated(CLAM_SB):
 
         initialize_weights(self)
 
-class CLAM_SB_resnet18_no_FC(CLAM_SB):
+class CLAM_SB_resnet18_no_trunc_no_FC(CLAM_SB):
     def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
         super(CLAM_SB, self).__init__()
@@ -329,7 +329,7 @@ class CLAM_SB_resnet18_no_FC(CLAM_SB):
 
         initialize_weights(self)
 
-class CLAM_SB_resnet18(CLAM_SB):
+class CLAM_SB_resnet18_no_trunc(CLAM_SB):
     def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
         super(CLAM_SB, self).__init__()
