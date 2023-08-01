@@ -217,6 +217,145 @@ class CLAM_SB_EffNetB4(CLAM_SB):
 
         initialize_weights(self)
 
+class CLAM_SB_ViT_small_384(CLAM_SB):
+    def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
+        super(CLAM_SB, self).__init__()
+        size_dict_eff_net = {"small": [384, 384, 256]}
+        self.size_dict = size_dict_eff_net
+        # self.size_dict = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
+        size = self.size_dict[size_arg]
+        fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
+        if dropout:
+            fc.append(nn.Dropout(0.25))
+        if gate:
+            attention_net = Attn_Net_Gated(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
+        else:
+            attention_net = Attn_Net(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
+        fc.append(attention_net)
+        self.attention_net = nn.Sequential(*fc)
+        self.classifiers = nn.Linear(size[1], n_classes)
+        instance_classifiers = [nn.Linear(size[1], 2) for i in range(n_classes)]
+        self.instance_classifiers = nn.ModuleList(instance_classifiers)
+        self.k_sample = k_sample
+        self.instance_loss_fn = instance_loss_fn
+        self.n_classes = n_classes
+        self.subtyping = subtyping
+
+        initialize_weights(self)
+
+class CLAM_SB_resnet18_truncated_no_FC(CLAM_SB):
+    def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
+        super(CLAM_SB, self).__init__()
+        size_dict_eff_net = {"small": [256, 256, 256]}
+        self.size_dict = size_dict_eff_net
+        # self.size_dict = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
+        size = self.size_dict[size_arg]
+        # fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
+        # if dropout:
+        #     fc.append(nn.Dropout(0.25))
+        if gate:
+            attention_net = Attn_Net_Gated(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
+        else:
+            attention_net = Attn_Net(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
+        # fc.append(attention_net)
+        # self.attention_net = nn.Sequential(*fc)
+        attention_net = [attention_net]
+        self.attention_net = nn.Sequential(*attention_net)
+        self.classifiers = nn.Linear(size[1], n_classes)
+        instance_classifiers = [nn.Linear(size[1], 2) for i in range(n_classes)]
+        self.instance_classifiers = nn.ModuleList(instance_classifiers)
+        self.k_sample = k_sample
+        self.instance_loss_fn = instance_loss_fn
+        self.n_classes = n_classes
+        self.subtyping = subtyping
+
+        initialize_weights(self)
+
+class CLAM_SB_resnet18_truncated(CLAM_SB):
+    def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
+        super(CLAM_SB, self).__init__()
+        size_dict_eff_net = {"small": [256, 256, 256]}
+        self.size_dict = size_dict_eff_net
+        # self.size_dict = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
+        size = self.size_dict[size_arg]
+        fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
+        if dropout:
+            fc.append(nn.Dropout(0.25))
+        if gate:
+            attention_net = Attn_Net_Gated(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
+        else:
+            attention_net = Attn_Net(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
+        fc.append(attention_net)
+        self.attention_net = nn.Sequential(*fc)
+        self.classifiers = nn.Linear(size[1], n_classes)
+        instance_classifiers = [nn.Linear(size[1], 2) for i in range(n_classes)]
+        self.instance_classifiers = nn.ModuleList(instance_classifiers)
+        self.k_sample = k_sample
+        self.instance_loss_fn = instance_loss_fn
+        self.n_classes = n_classes
+        self.subtyping = subtyping
+
+        initialize_weights(self)
+
+class CLAM_SB_resnet18_no_FC(CLAM_SB):
+    def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
+        super(CLAM_SB, self).__init__()
+        size_dict_eff_net = {"small": [512, 512, 256]}
+        self.size_dict = size_dict_eff_net
+        # self.size_dict = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
+        size = self.size_dict[size_arg]
+        # fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
+        # if dropout:
+        #     fc.append(nn.Dropout(0.25))
+        if gate:
+            attention_net = Attn_Net_Gated(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
+        else:
+            attention_net = Attn_Net(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
+        # fc.append(attention_net)
+        # self.attention_net = nn.Sequential(*fc)
+        attention_net = [attention_net]
+        self.attention_net = nn.Sequential(*attention_net)
+        self.classifiers = nn.Linear(size[1], n_classes)
+        instance_classifiers = [nn.Linear(size[1], 2) for i in range(n_classes)]
+        self.instance_classifiers = nn.ModuleList(instance_classifiers)
+        self.k_sample = k_sample
+        self.instance_loss_fn = instance_loss_fn
+        self.n_classes = n_classes
+        self.subtyping = subtyping
+
+        initialize_weights(self)
+
+class CLAM_SB_resnet18(CLAM_SB):
+    def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
+        super(CLAM_SB, self).__init__()
+        size_dict_eff_net = {"small": [512, 256, 256]}
+        self.size_dict = size_dict_eff_net
+        # self.size_dict = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
+        size = self.size_dict[size_arg]
+        fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
+        if dropout:
+            fc.append(nn.Dropout(0.25))
+        if gate:
+            attention_net = Attn_Net_Gated(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
+        else:
+            attention_net = Attn_Net(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
+        fc.append(attention_net)
+        self.attention_net = nn.Sequential(*fc)
+        self.classifiers = nn.Linear(size[1], n_classes)
+        instance_classifiers = [nn.Linear(size[1], 2) for i in range(n_classes)]
+        self.instance_classifiers = nn.ModuleList(instance_classifiers)
+        self.k_sample = k_sample
+        self.instance_loss_fn = instance_loss_fn
+        self.n_classes = n_classes
+        self.subtyping = subtyping
+
+        initialize_weights(self)
+
 class CLAM_MB(CLAM_SB):
     def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
