@@ -147,7 +147,7 @@ class Bottleneck_Baseline_ResNet18(nn.Module):
 
 class ResNet18_Baseline(nn.Module):
 
-    def __init__(self, block, layers):
+    def __init__(self, block, layers, truncated):
         self.inplanes = 64
         super(ResNet18_Baseline, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -158,7 +158,9 @@ class ResNet18_Baseline(nn.Module):
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d(1) 
+        self.truncated = truncated
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -194,6 +196,8 @@ class ResNet18_Baseline(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
+        if not self.truncated:
+            x = self.layer4(x)
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
@@ -212,12 +216,12 @@ def resnet50_baseline(pretrained=False):
         model = load_pretrained_weights(model, 'resnet50')
     return model
 
-def resnet18_baseline(pretrained=False):
+def resnet18_baseline(pretrained=False, truncated=True):
     """Constructs a Modified ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet18_Baseline(Bottleneck_Baseline_ResNet18, [2, 2, 2, 2])
+    model = ResNet18_Baseline(Bottleneck_Baseline_ResNet18, [2, 2, 2, 2], truncated=truncated)
     if pretrained:
         model = load_pretrained_weights(model, 'resnet18')
     return model
@@ -238,20 +242,3 @@ def load_pretrained_weights(model, name):
     pretrained_dict = model_zoo.load_url(model_urls[name])
     model.load_state_dict(pretrained_dict, strict=False)
     return model
-
-
-if __name__ == "__main__":
-
-    model_18 = resnet18_baseline(pretrained=True).to('cuda')
-
-    model_50 = resnet50_baseline(pretrained=True).to('cuda')
-
-    X = torch.randn(1, 3, 224, 224).to('cuda')
-
-    output = model_18(X)
-
-    print(output.shape)
-
-    output = model_50(X)
-
-    print(output.shape)
