@@ -17,14 +17,23 @@ from PIL import Image
 import h5py
 import openslide
 import timm
-from timm.models.layers import trunc_normal_
-from timm.models._hub import load_state_dict_from_hf
+# from timm.models.layers import trunc_normal_
+# from timm.models._hub import load_state_dict_from_hf
 from utils.pos_embed import interpolate_pos_embed
 from HIPT.hipt_model_utils import get_vit256
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 
+def _remove_prefix(s, prefix):
+    if s.startswith(prefix):
+        s = s[len(prefix):]
+    return s
+
+def clean_state_dict(state_dict, prefix, filter=None):
+    if filter is None:
+        filter = lambda *args: True
+    return {_remove_prefix(k, prefix): v for k, v in state_dict.items() if filter(k)}
 
 def load_model_weights(model, weights):
 
@@ -126,9 +135,9 @@ def compute_w_loader(file_path, output_path, wsi, model, model_type,
 				print('batch {}/{}, {} files processed'.format(count, len(loader), count * batch_size))
 			batch = batch.to(device, non_blocking=True)
 
-			if model_type in ["resnet50", "resnet_50_histo_pretr",
+			if model_type in ["resnet50", "resnet_50_histo_pretr", 'resnet_50_mtdp_pretr'
 		    'resnet_18', 'resnet_18_no_trunc',
-			'resnet_18_sshisto', 'resnet_18_sshisto_no_trunc'
+			'resnet_18_sshisto', 'resnet_18_sshisto_no_trunc',
 			'vit_small_patch16_384_HIPT_pretr']:
 				features = model(batch)
 				features = features.cpu().numpy()
@@ -159,7 +168,7 @@ parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--model', type=str, help="model to load for feature extraction", 
-		    choices=['resnet50', 'resnet_50_histo_pretr',
+		    choices=['resnet50', 'resnet_50_histo_pretr', 'resnet_50_mtdp_pretr',
 	        'resnet_18', 'resnet_18_no_trunc',
 	        'resnet_18_sshisto', 'resnet_18_sshisto_no_trunc', 
 			'vit_large_patch16_224_norm_pretr', 'vit_large_patch16_384_norm_pretr',
@@ -188,6 +197,15 @@ if __name__ == '__main__':
 		print('loading model checkpoint for resnet50')
 		model = resnet50_baseline(pretrained=True)
 
+	elif args.model == 'resnet_50_mtdp_pretr':
+		print('loading model checkpoint for resnet_50_mtdp_pretr')
+		model = resnet50_baseline(pretrained=False)
+		state_dict = torch.load("/media/Maack/Crucial_X8/LennartM/Pant/ResNet50_mtdp_pretr/resnet50-mh-best-191205-141200.pth")
+		state_dict = clean_state_dict(state_dict, "features.")
+		msg = model.load_state_dict(state_dict, strict=False)
+		print(msg)
+		model.load_state_dict(state_dict, strict=False)
+
 	elif args.model == 'resnet_50_histo_pretr':
 		print('loading model checkpoint for resnet_50_histo_pretr')
 		model = resnet_50_histo_pretr()
@@ -197,13 +215,13 @@ if __name__ == '__main__':
 		model = resnet18_baseline(pretrained=True, truncated=True)
 
 	elif args.model == 'resnet_18_no_trunc':
-		print('loading model checkpoint for resnet_18')
+		print('loading model checkpoint for resnet_18_no_trunc')
 		model = resnet18_baseline(pretrained=True, truncated=False)
 	
 	elif args.model == 'resnet_18_sshisto':
 		print('loading model checkpoint for resnet_18_sshisto')
 		model = resnet18_baseline(pretrained=False, truncated=True)
-		MODEL_PATH = '/data/Maack/PANT/CLAM/experiments/resnet_18_sshisto/tenpercent_resnet18.ckpt'
+		MODEL_PATH = '/media/Maack/Crucial_X8/LennartM/Pant/resnet_18_sshisto_no_trunc/tenpercent_resnet18.ckpt'
 		state = torch.load(MODEL_PATH)
 		state_dict = state['state_dict']
 		for key in list(state_dict.keys()):
@@ -211,9 +229,9 @@ if __name__ == '__main__':
 		model = load_model_weights(model, state_dict)
 
 	elif args.model == 'resnet_18_sshisto_no_trunc':
-		print('loading model checkpoint for resnet_18_sshisto')
+		print('loading model checkpoint for resnet_18_sshisto_no_trunc')
 		model = resnet18_baseline(pretrained=False, truncated=False)
-		MODEL_PATH = '/data/Maack/PANT/CLAM/experiments/resnet_18_sshisto/tenpercent_resnet18.ckpt'
+		MODEL_PATH = '/media/Maack/Crucial_X8/LennartM/Pant/resnet_18_sshisto_no_trunc/tenpercent_resnet18.ckpt'
 		state = torch.load(MODEL_PATH)
 		state_dict = state['state_dict']
 		for key in list(state_dict.keys()):
