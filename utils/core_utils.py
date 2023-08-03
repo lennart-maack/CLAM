@@ -4,7 +4,7 @@ from utils.utils import *
 import os
 from datasets.dataset_generic import save_splits
 from models.model_mil import MIL_fc, MIL_fc_mc
-from models.model_clam import CLAM_MB, CLAM_SB, CLAM_SB_resnet18_no_trunc_no_FC, CLAM_SB_resnet18_no_trunc, CLAM_SB_resnet18, CLAM_SB_resnet18_no_FC, CLAM_SB_ViT_small_384
+from models.model_clam import CLAM_MB, CLAM_SB, CLAM_SB_resnet50_notrunc, CLAM_SB_resnet18_no_trunc_no_FC, CLAM_SB_resnet18_no_trunc, CLAM_SB_resnet18, CLAM_SB_resnet18_no_FC, CLAM_SB_ViT_small_384
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.metrics import auc as calc_auc
@@ -129,7 +129,7 @@ def train(datasets, cur, args):
     if args.model_size is not None and args.model_type != 'mil':
         model_dict.update({"size_arg": args.model_size})
     
-    if args.model_type in ['clam_sb', 'clam_mb', 'clam_sb_effnetb4',
+    if args.model_type in ['clam_sb', 'clam_mb', 'clam_sb_resnet50_notrunc', 
                            'clam_sb_resnet18_no_trunc', 'clam_sb_resnet_18_no_trunc_no_FC', 'clam_sb_resnet_18', 'clam_sb_resnet_18_no_FC',
                            'clam_sb_ViT_small_384']:
         if args.subtyping:
@@ -148,6 +148,8 @@ def train(datasets, cur, args):
         
         if args.model_type =='clam_sb':
             model = CLAM_SB(**model_dict, instance_loss_fn=instance_loss_fn)
+        elif args.model_type == 'clam_sb_resnet50_notrunc':
+            model = CLAM_SB_resnet50_notrunc(**model_dict, instance_loss_fn=instance_loss_fn)
         elif args.model_type == 'clam_sb_resnet18_no_trunc':
             model = CLAM_SB_resnet18_no_trunc(**model_dict, instance_loss_fn=instance_loss_fn)
         elif args.model_type == 'clam_sb_resnet_18_no_trunc_no_FC':
@@ -194,7 +196,7 @@ def train(datasets, cur, args):
     print('Done!')
 
     for epoch in range(args.max_epochs):
-        if args.model_type in ['clam_sb', 'clam_mb', 'clam_sb_effnetb4',
+        if args.model_type in ['clam_sb', 'clam_mb', 'clam_sb_effnetb4', 'clam_sb_resnet50_notrunc',
                                'clam_sb_resnet18_no_trunc', 'clam_sb_resnet_18_no_trunc_no_FC', 'clam_sb_resnet_18', 'clam_sb_resnet_18_no_FC',
                                'clam_sb_ViT_small_384'] and not args.no_inst_cluster:     
             train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn)
