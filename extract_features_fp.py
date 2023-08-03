@@ -135,7 +135,8 @@ def compute_w_loader(file_path, output_path, wsi, model, model_type,
 				print('batch {}/{}, {} files processed'.format(count, len(loader), count * batch_size))
 			batch = batch.to(device, non_blocking=True)
 
-			if model_type in ["resnet50", "resnet_50_histo_pretr", 'resnet_50_mtdp_pretr'
+			if model_type in ["resnet50", "resnet_50_histo_pretr",
+		    'resnet_50_mtdp_pretr', 'resnet_50_mtdp_pretr_notrunc',
 		    'resnet_18', 'resnet_18_no_trunc',
 			'resnet_18_sshisto', 'resnet_18_sshisto_no_trunc',
 			'vit_small_patch16_384_HIPT_pretr']:
@@ -168,7 +169,8 @@ parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--model', type=str, help="model to load for feature extraction", 
-		    choices=['resnet50', 'resnet_50_histo_pretr', 'resnet_50_mtdp_pretr',
+		    choices=['resnet50', 'resnet_50_histo_pretr',
+	        'resnet_50_mtdp_pretr', 'resnet_50_mtdp_pretr_notrunc',
 	        'resnet_18', 'resnet_18_no_trunc',
 	        'resnet_18_sshisto', 'resnet_18_sshisto_no_trunc', 
 			'vit_large_patch16_224_norm_pretr', 'vit_large_patch16_384_norm_pretr',
@@ -200,7 +202,16 @@ if __name__ == '__main__':
 	elif args.model == 'resnet_50_mtdp_pretr':
 		print('loading model checkpoint for resnet_50_mtdp_pretr')
 		model = resnet50_baseline(pretrained=False)
-		state_dict = torch.load("/media/Maack/Crucial_X8/LennartM/Pant/ResNet50_mtdp_pretr/resnet50-mh-best-191205-141200.pth")
+		state_dict = torch.load("/media/Maack/Crucial_X8/LennartM/Pant/resnet_50_mtdp_pretr/resnet50-mh-best-191205-141200.pth")
+		state_dict = clean_state_dict(state_dict, "features.")
+		msg = model.load_state_dict(state_dict, strict=False)
+		print(msg)
+		model.load_state_dict(state_dict, strict=False)
+
+	elif args.model == 'resnet_50_mtdp_pretr_notrunc':
+		print('loading model checkpoint for resnet_50_mtdp_pretr_notrunc')
+		model = resnet50_baseline(pretrained=False, truncated=False)
+		state_dict = torch.load("/media/Maack/Crucial_X8/LennartM/Pant/resnet_50_mtdp_pretr/resnet50-mh-best-191205-141200.pth")
 		state_dict = clean_state_dict(state_dict, "features.")
 		msg = model.load_state_dict(state_dict, strict=False)
 		print(msg)

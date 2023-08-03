@@ -55,7 +55,7 @@ class Bottleneck_Baseline(nn.Module):
 
 class ResNet_Baseline(nn.Module):
 
-    def __init__(self, block, layers):
+    def __init__(self, block, layers, truncated=True):
         self.inplanes = 64
         super(ResNet_Baseline, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -66,7 +66,9 @@ class ResNet_Baseline(nn.Module):
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d(1) 
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
+        self.truncated = truncated
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -101,6 +103,8 @@ class ResNet_Baseline(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
+        if not self.truncated:
+            x = self.layer4(x)
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
@@ -206,12 +210,12 @@ class ResNet18_Baseline(nn.Module):
 
 
 
-def resnet50_baseline(pretrained=False):
+def resnet50_baseline(pretrained=False, truncated=True):
     """Constructs a Modified ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_Baseline(Bottleneck_Baseline, [3, 4, 6, 3])
+    model = ResNet_Baseline(Bottleneck_Baseline, [3, 4, 6, 3], truncated=truncated)
     if pretrained:
         model = load_pretrained_weights(model, 'resnet50')
     return model
